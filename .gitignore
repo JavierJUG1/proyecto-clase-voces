@@ -1,0 +1,9 @@
+# Local secrets written by `elevenlabs onboard`
+/.env.local
+.env*
+# dependencias y archivos locales
+node_modules/
+/.claude/
+# respaldos y archivos originales (grabaciones y guion) — se quedan solo en la computadora
+/respaldo/
+/archivos originales/

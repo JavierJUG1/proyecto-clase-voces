@@ -1,0 +1,11 @@
+{
+  "name": "clase-ninos-guion",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "node --env-file=.env.local index.js"
+  },
+  "dependencies": {
+    "@elevenlabs/elevenlabs-js": "^2.79.0"
+  }
+}
