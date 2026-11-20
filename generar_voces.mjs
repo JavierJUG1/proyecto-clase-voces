@@ -1,4 +1,5 @@
 // Genera las voces del guion "Lámparas Encendidas" con ElevenLabs (voces latinas de la biblioteca, plan Creator).
+// Uso:  node --env-file=.env.local generar_voces.mjs   (si hay una variable ELEVENLABS_API_KEY en el sistema, tiene prioridad: quitarla)
 // Uso:  node --env-file=.env.local generar_voces.mjs [--limit N] [--solo clave1,clave2]
 // Guarda cada línea en "audios generados/<id>.mp3" + "<id>.json" (tiempos por palabra).
 // Si el archivo ya existe NO se vuelve a generar (para no gastar caracteres).
@@ -70,6 +71,13 @@ const CHORUS = {
   girls: [{ v: 'lizy', st: 0.5, sp: 1.0, style: 0.35 }, { v: 'gaby', st: 0.5, sp: 1.0, style: 0.35 }],
   family:[{ v: 'sebastian', st: 0.4, sp: 1.0, style: 0.5 }, { v: 'lizy', st: 0.5, sp: 1.0, style: 0.35 }],
 };
+// coros especiales: cada personaje con su propia voz
+const CORO_ESPECIAL = {
+  // las tres niñas juntas
+  '¡Yeshúa es nuestro Buen Pastor, y creemos en Él!': ['nina1', 'nina2', 'nina3'].map(r => ({ ...ROLE[r], st: 0.5, style: 0.45 })),
+  // Niño 1, Niño 2, Papá y Mamá: muy alegres (modelo v3 con la etiqueta [excited])
+  '¡Síííí!': ['nino1', 'nino2', 'papa', 'mama'].map(r => ({ ...ROLE[r], model: 'eleven_v3', st: 0.0, say: '[excited] ¡Síííí!' })),
+};
 const BOYS = new Set(['juan', 'simon', 'judas', 'eleazar', 'jonatan', 'nino1', 'nino2']);
 
 // ---- Guion (se lee del módulo) ----
@@ -89,7 +97,7 @@ for (const x of SCR) {
     jobs.push({ key: x.t, text, parts: [ROLE[x.w[0]]] });
   } else {
     const kind = x.w.every(w => BOYS.has(w)) ? 'boys' : x.w.every(w => w.startsWith('nina')) ? 'girls' : 'family';
-    jobs.push({ key: x.t, text, parts: CHORUS[kind] });
+    jobs.push({ key: x.t, text, parts: CORO_ESPECIAL[x.t] || CHORUS[kind] });
   }
 }
 // voz guía: lee las acotaciones (sin emojis)
@@ -114,7 +122,7 @@ async function tts(text, p) {
     method: 'POST',
     headers: { 'xi-api-key': KEY, 'Content-Type': 'application/json' },
     body: JSON.stringify({
-      text, model_id: MODEL,
+      text, model_id: p.model || MODEL,
       voice_settings: { stability: p.st, similarity_boost: 0.8, style: p.style, use_speaker_boost: true, speed: p.sp },
     }),
   });
@@ -122,12 +130,13 @@ async function tts(text, p) {
   return r.json();
 }
 // tiempo de inicio (s) de cada palabra de text.split(' ')
-function wordTimes(text, al) {
+function wordTimes(text, al, say) {
   const starts = al.character_start_times_seconds, out = [];
+  const base = say ? Math.max(0, say.indexOf(text)) : 0; // si se mandó con etiqueta ([excited] …), saltarla
   let i = 0;
   for (const w of text.split(' ').filter(Boolean)) {
     const at = text.indexOf(w, i);
-    out.push(+(starts[at] ?? starts[starts.length - 1] ?? 0).toFixed(2));
+    out.push(+(starts[base + at] ?? starts[starts.length - 1] ?? 0).toFixed(2));
     i = at + w.length;
   }
   return out;
@@ -136,7 +145,7 @@ function wordTimes(text, al) {
 for (const j of todo) {
   const id = idOf(j.key);
   const res = [];
-  for (const p of j.parts) res.push(await tts(j.text, p));
+  for (const p of j.parts) res.push(await tts(p.say || j.text, p));
   const mp3 = path.join(OUT, id + '.mp3');
   if (res.length === 1 && j.parts[0].fx) {
     const raw = path.join(OUT, id + '_raw.mp3'); fs.writeFileSync(raw, Buffer.from(res[0].audio_base64, 'base64'));
@@ -147,7 +156,7 @@ for (const j of todo) {
     execFileSync('ffmpeg', ['-y', '-v', 'error', ...tmp.flatMap(f => ['-i', f]), '-filter_complex', `amix=inputs=${tmp.length}:normalize=0,volume=0.8`, '-b:a', '64k', mp3]);
     tmp.forEach(f => fs.unlinkSync(f));
   }
-  fs.writeFileSync(path.join(OUT, id + '.json'), JSON.stringify({ key: j.key, text: j.text, t: wordTimes(j.text, res[0].alignment) }));
+  fs.writeFileSync(path.join(OUT, id + '.json'), JSON.stringify({ key: j.key, text: j.text, coro: j.parts.length > 1, t: wordTimes(j.text, res[0].alignment, j.parts[0].say) }));
   console.log('OK', id, j.parts.map(p => p.v).join('+'), j.text.slice(0, 60));
 }
 console.log('listo:', todo.length, 'líneas');

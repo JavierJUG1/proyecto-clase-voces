@@ -72,7 +72,7 @@ for j in sorted(glob.glob(os.path.join(AUD, '*.json'))):
     if nuevo: shutil.copy2(mp3, raw); r = {}                           # guardar el original
     d = json.load(open(j, encoding='utf-8')); clave = d['key']
     texto = d.get('text') or hablado(clave.split('|', 1)[1] if re.match(r'^(narradora|narrador|guia)\|', clave) else clave)
-    if id_ in SALTAR: palabras = None
+    if id_ in SALTAR or d.get('coro'): palabras = None    # coros: varias voces a destiempo, no se cortan pausas
     else: palabras = r.get('palabras') or alinear(raw, texto)
     n = limpiar(raw, mp3, palabras, LUFS_GUIA if clave.startswith('guia|') else LUFS)
     json.dump({'palabras': palabras, 'limpio': md5(mp3), 'v': VERSION}, open(reg, 'w', encoding='utf-8'))
