@@ -13,7 +13,7 @@ BASE = os.path.dirname(os.path.abspath(__file__))
 AUD = os.path.join(BASE, 'audios generados')
 ALI = os.path.join(AUD, 'alineacion')            # alineaciones + registro de limpieza
 RAW = os.path.join(BASE, 'respaldo', 'audios_con_respiraciones')
-SALTAR = {'l1b28bv5', 'l1imu0k1'}            # Yeshúa (su eco vive en las pausas) y Niño 1 desanimado (su suspiro es parte de la actuación)
+SALTAR = {'l1b28bv5'}                             # Yeshúa: su eco vive en las pausas, no se limpia
 SR = 44100
 PISO = 0.03      # volumen en las pausas (≈ -30 dB)
 ANTES, DESPUES = 0.04, 0.08   # margen que se respeta alrededor de cada palabra (s)
@@ -74,6 +74,12 @@ for j in sorted(glob.glob(os.path.join(AUD, '*.json'))):
     texto = d.get('text') or hablado(clave.split('|', 1)[1] if re.match(r'^(narradora|narrador|guia)\|', clave) else clave)
     if id_ in SALTAR or d.get('coro'): palabras = None    # coros: varias voces a destiempo, no se cortan pausas
     else: palabras = r.get('palabras') or alinear(raw, texto)
+    if d.get('sync'):   # modelo v3: sus tiempos por palabra son aproximados -> usar la alineación real del audio
+        reales = palabras or alinear(raw, texto)
+        if len(reales) == len(d['t']):
+            d['t'] = [round(s_, 2) for s_, e_ in reales]
+            json.dump(d, open(j, 'w', encoding='utf-8'), ensure_ascii=False)
+        else: print(f'{id_}: no coincide el número de palabras ({len(reales)} vs {len(d["t"])}), se dejan los tiempos')
     n = limpiar(raw, mp3, palabras, LUFS_GUIA if clave.startswith('guia|') else LUFS)
     json.dump({'palabras': palabras, 'limpio': md5(mp3), 'v': VERSION}, open(reg, 'w', encoding='utf-8'))
     hechos += 1

@@ -80,9 +80,11 @@ const CORO_ESPECIAL = {
 };
 // líneas con una emoción especial (modelo v3 con etiquetas de emoción)
 const LINEA_ESPECIAL = {
-  // Niño 1, desanimado
+  // Niño 1, desanimado: mismo modelo que el resto (así conserva su voz); el contexto previo
+  // (previous_text, que no se pronuncia) le da el tono triste, más lento y menos estable
   'Papi, ¡uff! Hoy en la escuela todos se burlaron porque dije que sigo al Eterno. Dicen que la Biblia es una historia antigua.':
-    { model: 'eleven_v3', st: 0.0, tag: '[sighs] [sad, discouraged]' },
+    { st: 0.3, sp: 0.85, style: 0.65,
+      prev: 'Llegó a casa muy triste y desanimado, arrastrando los pies, con la cabeza baja, y dijo con voz apagada y un largo suspiro:' },
   // Papá, firme pero con amor
   '¡Sé fuerte y valiente! Tu batalla hoy no es con espadas, sino con tus decisiones diarias en el colegio y en casa.':
     { model: 'eleven_v3', st: 0.5, tag: '[firmly, with warmth and love]' },
@@ -104,7 +106,7 @@ for (const x of SCR) {
     for (const r of ['narradora', 'narrador']) jobs.push({ key: r + '|' + x.t, text, parts: [ROLE[r]] });
   } else if (x.w.length === 1) {
     const e = LINEA_ESPECIAL[x.t];
-    jobs.push({ key: x.t, text, parts: [e ? { ...ROLE[x.w[0]], ...e, say: e.tag + ' ' + text } : ROLE[x.w[0]]] });
+    jobs.push({ key: x.t, text, parts: [e ? { ...ROLE[x.w[0]], ...e, say: e.tag ? e.tag + ' ' + text : undefined } : ROLE[x.w[0]]] });
   } else {
     const kind = x.w.every(w => BOYS.has(w)) ? 'boys' : x.w.every(w => w.startsWith('nina')) ? 'girls' : 'family';
     jobs.push({ key: x.t, text, parts: CORO_ESPECIAL[x.t] || CHORUS[kind] });
@@ -132,7 +134,7 @@ async function tts(text, p) {
     method: 'POST',
     headers: { 'xi-api-key': KEY, 'Content-Type': 'application/json' },
     body: JSON.stringify({
-      text, model_id: p.model || MODEL,
+      text, model_id: p.model || MODEL, ...(p.prev ? { previous_text: p.prev } : {}),
       voice_settings: { stability: p.st, similarity_boost: 0.8, style: p.style, use_speaker_boost: true, speed: p.sp },
     }),
   });
@@ -166,7 +168,7 @@ for (const j of todo) {
     execFileSync('ffmpeg', ['-y', '-v', 'error', ...tmp.flatMap(f => ['-i', f]), '-filter_complex', `amix=inputs=${tmp.length}:normalize=0,volume=0.8`, '-b:a', '64k', mp3]);
     tmp.forEach(f => fs.unlinkSync(f));
   }
-  fs.writeFileSync(path.join(OUT, id + '.json'), JSON.stringify({ key: j.key, text: j.text, coro: j.parts.length > 1, t: wordTimes(j.text, res[0].alignment, j.parts[0].say) }));
+  fs.writeFileSync(path.join(OUT, id + '.json'), JSON.stringify({ key: j.key, text: j.text, coro: j.parts.length > 1, ...(j.parts[0].model === 'eleven_v3' ? { sync: true } : {}), t: wordTimes(j.text, res[0].alignment, j.parts[0].say) }));
   console.log('OK', id, j.parts.map(p => p.v).join('+'), j.text.slice(0, 60));
 }
 console.log('listo:', todo.length, 'líneas');
