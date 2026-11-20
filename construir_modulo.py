@@ -98,6 +98,39 @@ if os.path.exists(musica):
           "function toggleMusic(){musOn=!musOn;musStarted=true;try{localStorage.setItem('le_musica',musOn?'1':'0')}catch(e){}"
           "$('musBtn').classList.toggle('off',!musOn);if(musOn)bgm.play().catch(()=>{})}")
 
+# 3d) banner inicial: mantener la proporción de las imágenes (3:2) para que se vean completas
+#     y tema claro con los colores de beitteshuva.com (fondo celeste claro, azul #1d71b8)
+patch('</style>', '''
+/* banner inicial: misma proporción que las imágenes (1200x800), sin recortes */
+.hero{aspect-ratio:auto;width:min(100%,calc(60vh*1.5));max-height:none;margin:0 auto;background:linear-gradient(180deg,#1d71b8,#003f61)}
+.hero::before{content:"";display:block;aspect-ratio:3/2}
+.hero img{inset:auto;top:0;left:0;width:100%;height:auto;aspect-ratio:3/2;object-fit:cover}
+.hero .veil{display:none}
+.hero .ttl{position:static;padding:12px 14px 16px}
+.hero h1{text-shadow:0 3px 0 #6b3d00,0 6px 18px rgba(0,0,0,.35)}
+.hero p{color:#fff}
+/* tema claro Beit Teshuvá */
+:root{--bt-celeste:#36a9e1;--bt-azul:#1d71b8;--bt-claro:#5fc8fa;--bt-noche:#003f61;--bt-tinta:#0b2e4a;--bt-fondo:#f3f9fd;--bt-borde:#d3e9f7}
+html,body{background-color:#e6f5fd;background:linear-gradient(180deg,#cdeafb 0%,#e6f5fd 40%,var(--bt-fondo) 100%) fixed;color:var(--bt-tinta)}
+.stars{display:none}
+.pick-title,.hub-head h2,.lvl-head h2,.parents h3,.group h3{color:var(--bt-azul)}
+.screen [style*="color:var(--gold2)"]{color:var(--bt-azul)!important}
+.parents,.ccard,.mcard,.chip,.toggle,.opt,.ev,.me-chip,.btn.ghost{background:#fff;color:var(--bt-tinta);box-shadow:0 4px 14px rgba(29,113,184,.14),inset 0 0 0 1px var(--bt-borde)}
+.ccard:hover,.mcard:hover,.opt:hover{background:#eaf6fe}
+.chip.on{background:var(--gold);color:#3b2500}
+.mcard .num{background:#e3f3fc}
+.mcard.done .num{background:linear-gradient(180deg,var(--gold2),var(--gold))}
+.icon-btn{background:#fff;color:var(--bt-azul);box-shadow:0 3px 10px rgba(29,113,184,.18),inset 0 0 0 1px var(--bt-borde)}
+.toggle .sw{background:#b8c9d6}
+.dot{background:#c5e3f5}.dot.cur{background:var(--bt-azul)}
+.ev.placed{background:#d4f3e2}.ev.wrong{background:#fde0e1}
+.opt.right{background:var(--green);color:#fff}.opt.wrong{background:var(--red);color:#fff}
+.act-tag{color:#fff}
+.mbox{background:linear-gradient(180deg,var(--bt-celeste),var(--bt-azul));color:#fff}
+.mbox h2{color:#fff}
+.modal{background:rgba(0,63,97,.55)}
+</style>''')
+
 # 4) guardar: módulo SCORM, HTML suelto y zip
 open(os.path.join(MOD, 'index.html'), 'w', encoding='utf-8', newline='').write(html)
 shutil.copy2(os.path.join(MOD, 'index.html'), os.path.join(BASE, 'Lamparas_Encendidas_Ensayo.html'))
