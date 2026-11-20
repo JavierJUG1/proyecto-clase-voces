@@ -78,6 +78,15 @@ const CORO_ESPECIAL = {
   // Niño 1, Niño 2, Papá y Mamá: muy alegres (modelo v3 con la etiqueta [excited])
   '¡Síííí!': ['nino1', 'nino2', 'papa', 'mama'].map(r => ({ ...ROLE[r], model: 'eleven_v3', st: 0.0, say: '[excited] ¡Síííí!' })),
 };
+// líneas con una emoción especial (modelo v3 con etiquetas de emoción)
+const LINEA_ESPECIAL = {
+  // Niño 1, desanimado
+  'Papi, ¡uff! Hoy en la escuela todos se burlaron porque dije que sigo al Eterno. Dicen que la Biblia es una historia antigua.':
+    { model: 'eleven_v3', st: 0.0, tag: '[sighs] [sad, discouraged]' },
+  // Papá, firme pero con amor
+  '¡Sé fuerte y valiente! Tu batalla hoy no es con espadas, sino con tus decisiones diarias en el colegio y en casa.':
+    { model: 'eleven_v3', st: 0.5, tag: '[firmly, with warmth and love]' },
+};
 const BOYS = new Set(['juan', 'simon', 'judas', 'eleazar', 'jonatan', 'nino1', 'nino2']);
 
 // ---- Guion (se lee del módulo) ----
@@ -94,7 +103,8 @@ for (const x of SCR) {
   if (x.w.length === 1 && x.w[0] === 'narr') {
     for (const r of ['narradora', 'narrador']) jobs.push({ key: r + '|' + x.t, text, parts: [ROLE[r]] });
   } else if (x.w.length === 1) {
-    jobs.push({ key: x.t, text, parts: [ROLE[x.w[0]]] });
+    const e = LINEA_ESPECIAL[x.t];
+    jobs.push({ key: x.t, text, parts: [e ? { ...ROLE[x.w[0]], ...e, say: e.tag + ' ' + text } : ROLE[x.w[0]]] });
   } else {
     const kind = x.w.every(w => BOYS.has(w)) ? 'boys' : x.w.every(w => w.startsWith('nina')) ? 'girls' : 'family';
     jobs.push({ key: x.t, text, parts: CORO_ESPECIAL[x.t] || CHORUS[kind] });
